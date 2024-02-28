@@ -1,0 +1,14 @@
+chat_app/macos/Flutter/Flutter-Release.xcconfig
+chat_app/macos/Flutter/Flutter-Debug.xcconfig
+chat_app/macos/Podfile
+chat_app/ios/Runner.xcworkspace/contents.xcworkspacedata
+chat_app/ios/Runner.xcworkspace/contents.xcworkspacedata
+chat_app/ios/Runner.xcworkspace/contents.xcworkspacedata
+chat_app/ios/Runner.xcodeproj/project.pbxproj
+chat_app/ios/Runner/GoogleService-Info.plist
+chat_app/ios/Flutter/Release.xcconfig
+chat_app/ios/Flutter/Release.xcconfig
+chat_app/ios/Flutter/Debug.xcconfig
+chat_app/ios/Podfile.lock
+chat_app/ios/Podfile
+chat_app/install.sh
