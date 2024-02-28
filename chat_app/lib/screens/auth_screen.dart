@@ -1,3 +1,8 @@
+import 'dart:developer';
+
+import 'package:chat_app/widgets/user_image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -8,17 +13,35 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
+  final _firebase = FirebaseAuth.instance;
   bool _isLogIn = true;
   final _formKey = GlobalKey<FormState>();
   String? _enteredEmail = '';
   String? _enteredPass = '';
 
-  void onSubmit() {
+  void onSubmit() async {
     bool isValid = _formKey.currentState!.validate();
-    if (isValid == true) {
+    if (!isValid) {
+      return;
+    }
+    if (isValid) {
       _formKey.currentState!.save();
-      print(_enteredEmail);
-      print(_enteredPass);
+
+      try {
+        if (_isLogIn) {
+          final userCredential = await _firebase.signInWithEmailAndPassword(
+              email: _enteredEmail!, password: _enteredPass!);
+        } else {
+          final userCredential = await _firebase.createUserWithEmailAndPassword(
+              email: _enteredEmail!, password: _enteredPass!);
+          print(userCredential);
+        }
+      } catch (error) {
+        log(error.toString());
+        print(error.toString());
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
     }
   }
 
@@ -46,6 +69,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       key: _formKey,
                       child: Column(
                         children: [
+                          if (!_isLogIn) const UserImagePicker(),
                           TextFormField(
                             textCapitalization: TextCapitalization.none,
                             autocorrect: false,
@@ -62,16 +86,12 @@ class _AuthScreenState extends State<AuthScreen> {
                               }
                             },
                             onSaved: (value) {
-                              setState(() {
-                                _enteredEmail = value;
-                              });
+                              _enteredEmail = value;
                             },
                           ),
                           TextFormField(
                             onSaved: (value) {
-                              setState(() {
-                                _enteredPass = value;
-                              });
+                              _enteredPass = value;
                             },
                             decoration: const InputDecoration(
                               labelText: "Password",
@@ -90,10 +110,8 @@ class _AuthScreenState extends State<AuthScreen> {
                                   backgroundColor: Theme.of(context)
                                       .colorScheme
                                       .primaryContainer),
-                              onPressed: () {
-                                onSubmit();
-                              },
-                              child: const Text("Sign in")),
+                              onPressed: onSubmit,
+                              child: Text(_isLogIn ? "Sign in" : "Sign up")),
                           const SizedBox(
                             height: 10,
                           ),
