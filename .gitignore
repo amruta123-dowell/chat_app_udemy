@@ -21,3 +21,8 @@ chat_app/linux/flutter/generated_plugin_registrant.cc
 chat_app/pubspec.lock
 .vscode/launch.json
 chat_app/pubspec.lock
+chat_app/windows/flutter/generated_plugins.cmake
+chat_app/windows/flutter/generated_plugin_registrant.cc
+chat_app/macos/Flutter/GeneratedPluginRegistrant.swift
+chat_app/linux/flutter/generated_plugins.cmake
+chat_app/pubspec.lock

@@ -1,8 +1,11 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:chat_app/widgets/user_image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -18,23 +21,47 @@ class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
   String? _enteredEmail = '';
   String? _enteredPass = '';
+  File? _selectedImage;
+  bool _isAuthenticating = false;
+  String _enteredUsername = '';
 
   void onSubmit() async {
     bool isValid = _formKey.currentState!.validate();
-    if (!isValid) {
+    if (!isValid || (!_isLogIn && _selectedImage == null)) {
       return;
     }
     if (isValid) {
       _formKey.currentState!.save();
 
       try {
+        setState(() {
+          _isAuthenticating = true;
+        });
         if (_isLogIn) {
           final userCredential = await _firebase.signInWithEmailAndPassword(
               email: _enteredEmail!, password: _enteredPass!);
         } else {
           final userCredential = await _firebase.createUserWithEmailAndPassword(
               email: _enteredEmail!, password: _enteredPass!);
-          print(userCredential);
+
+          final userStoreImg = FirebaseStorage.instance
+              .ref()
+              .child("User_profile_images")
+              .child("${userCredential.user!.uid}.jpg");
+
+          //upload to firebase
+          await userStoreImg.putFile(_selectedImage!);
+          final imageUrl = await userStoreImg.getDownloadURL();
+          log("firebase download link --------------------------> $imageUrl");
+
+          await FirebaseFirestore.instance
+              .collection("users")
+              .doc(userCredential.user!.uid)
+              .set({
+            "username": _enteredUsername,
+            "email": _enteredEmail,
+            "image_url": imageUrl
+          });
         }
       } catch (error) {
         log(error.toString());
@@ -42,8 +69,13 @@ class _AuthScreenState extends State<AuthScreen> {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(error.toString())));
       }
+      setState(() {
+        _isAuthenticating = false;
+      });
     }
   }
+
+  void setFireStore() {}
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +101,12 @@ class _AuthScreenState extends State<AuthScreen> {
                       key: _formKey,
                       child: Column(
                         children: [
-                          if (!_isLogIn) const UserImagePicker(),
+                          if (!_isLogIn)
+                            UserImagePicker(
+                              onPickImage: (pickedImage) {
+                                _selectedImage = pickedImage;
+                              },
+                            ),
                           TextFormField(
                             textCapitalization: TextCapitalization.none,
                             autocorrect: false,
@@ -89,6 +126,22 @@ class _AuthScreenState extends State<AuthScreen> {
                               _enteredEmail = value;
                             },
                           ),
+                          if (!_isLogIn)
+                            TextFormField(
+                              decoration:
+                                  const InputDecoration(labelText: "Username"),
+                              validator: (value) {
+                                if (value == null ||
+                                    value.isEmpty ||
+                                    value.trim().length < 4) {
+                                  return "Please enter at least 4";
+                                }
+                                return null;
+                              },
+                              onSaved: (value) {
+                                _enteredUsername = value!;
+                              },
+                            ),
                           TextFormField(
                             onSaved: (value) {
                               _enteredPass = value;
@@ -105,29 +158,36 @@ class _AuthScreenState extends State<AuthScreen> {
                               }
                             },
                           ),
-                          TextButton(
-                              style: TextButton.styleFrom(
-                                  backgroundColor: Theme.of(context)
-                                      .colorScheme
-                                      .primaryContainer),
-                              onPressed: onSubmit,
-                              child: Text(_isLogIn ? "Sign in" : "Sign up")),
-                          const SizedBox(
-                            height: 10,
-                          ),
-                          TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  _isLogIn = !_isLogIn;
-                                });
-                              },
-                              style: TextButton.styleFrom(
-                                  backgroundColor: Theme.of(context)
-                                      .colorScheme
-                                      .primaryContainer),
-                              child: Text(_isLogIn
-                                  ? "Already have an account"
-                                  : "Create new account"))
+                          if (_isAuthenticating)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 10),
+                              child: CircularProgressIndicator(),
+                            ),
+                          if (!_isAuthenticating) ...[
+                            TextButton(
+                                style: TextButton.styleFrom(
+                                    backgroundColor: Theme.of(context)
+                                        .colorScheme
+                                        .primaryContainer),
+                                onPressed: onSubmit,
+                                child: Text(_isLogIn ? "Sign in" : "Sign up")),
+                            const SizedBox(
+                              height: 10,
+                            ),
+                            TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _isLogIn = !_isLogIn;
+                                  });
+                                },
+                                style: TextButton.styleFrom(
+                                    backgroundColor: Theme.of(context)
+                                        .colorScheme
+                                        .primaryContainer),
+                                child: Text(_isLogIn
+                                    ? "Already have an account"
+                                    : "Create new account"))
+                          ]
                         ],
                       ),
                     ),
